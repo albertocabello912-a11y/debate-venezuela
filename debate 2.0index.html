@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debate Político: Venezuela</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #131314;
+            --bg-secondary: #1e1f20;
+            --bg-tertiary: #1e1f20;
+            --border-color: #3c4043;
+            --text-primary: #e8eaed;
+            --text-secondary: #bdc1c6;
+            --text-tertiary: #9aa0a6;
+        }
+
+        .light-mode {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #ffffff;
+            --border-color: #dadce0;
+            --text-primary: #202124;
+            --text-secondary: #5f6368;
+            --text-tertiary: #5f6368;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        #chat-container::-webkit-scrollbar, #summary-content::-webkit-scrollbar { width: 8px; }
+        #chat-container::-webkit-scrollbar-track, #summary-content::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        #chat-container::-webkit-scrollbar-thumb, #summary-content::-webkit-scrollbar-thumb {
+            background-color: var(--text-tertiary);
+            border-radius: 20px;
+            border: 3px solid var(--bg-secondary);
+        }
+        .message-bubble {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            word-wrap: break-word;
+            opacity: 0;
+            color: #FFFFFF; /* Color de texto base para todas las burbujas */
+        }
+        .user-bubble {
+            background-color: #0284c7; /* Sky 600 */
+            border-bottom-right-radius: 5px;
+            align-self: flex-end;
+        }
+        .ai-bubble {
+            background-color: #dc2626; /* Red 600 */
+            border-bottom-left-radius: 5px;
+            align-self: flex-start;
+        }
+        .typing-indicator span {
+            height: 10px; width: 10px;
+            background-color: #f8fafc;
+            border-radius: 50%; display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 1.5s linear infinite; }
+        @keyframes fade-in-up { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
+        .mic-active { color: #ef4444; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+        /* Debate SVG Animation */
+        .debate-svg path.person-1 { animation: debate-bob-1 4s ease-in-out infinite; }
+        .debate-svg path.person-2 { animation: debate-bob-2 4s ease-in-out infinite; }
+        .debate-svg .speech-bubble { animation: speech-pop 4s ease-in-out infinite; transform-origin: center; }
+        @keyframes debate-bob-1 { 0%, 100% { transform: translateY(0); } 25% { transform: translateY(-3px); } 75% { transform: translateY(2px); } }
+        @keyframes debate-bob-2 { 0%, 100% { transform: translateY(0); } 25% { transform: translateY(2px); } 75% { transform: translateY(-3px); } }
+        @keyframes speech-pop { 0%, 45%, 55%, 100% { transform: scale(0); opacity: 0; } 50% { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body class="flex flex-col h-screen items-center justify-center p-2 md:p-4">
+
+    <!-- Pantalla de Carga -->
+    <div id="loading-screen" class="fixed inset-0 bg-black flex flex-col items-center justify-center z-50 transition-opacity duration-500">
+        <div class="relative w-64 h-48 mb-8 debate-svg">
+            <svg viewBox="0 0 200 150" class="w-full h-full">
+                <path class="person-1" d="M65 110 C 50 110, 45 90, 50 80 S 60 50, 75 50 S 90 60, 90 80 S 80 110, 65 110 Z" fill="#dc2626"/>
+                <circle class="person-1" cx="70" cy="40" r="12" fill="#dc2626"/>
+                <path class="person-2" d="M135 110 C 150 110, 155 90, 150 80 S 140 50, 125 50 S 110 60, 110 80 S 120 110, 135 110 Z" fill="#0284c7"/>
+                <circle class="person-2" cx="130" cy="40" r="12" fill="#0284c7"/>
+                <path class="speech-bubble" d="M95 55 l 10 -15 l 10 15 z" fill="#d1d5db"/>
+            </svg>
+        </div>
+        <div class="flex items-center space-x-4">
+             <div class="w-12 h-12 animate-spin">
+                <svg viewBox="0 0 100 100" fill="#facc15" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45"/><path d="M 50,5 A 45,45 0 0,0 50,95 Z" fill="#ca8a04"/><path d="M15 50 A 35 15 0 0 1 85 50 A 35 15 0 0 1 15 50" fill="#fde047"/>
+                </svg>
+             </div>
+             <p class="text-lg text-slate-300">Cargando debate...</p>
+        </div>
+    </div>
+    
+    <!-- Modal de Tutorial -->
+    <div id="tutorial-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-40 p-4">
+        <div style="background-color: var(--bg-secondary); border-color: var(--border-color);" class="border rounded-lg shadow-xl w-full max-w-lg flex flex-col p-6">
+            <h2 class="text-2xl font-bold text-[var(--text-primary)] text-center">¡Bienvenido al Debate!</h2>
+            <p class="text-sm text-[var(--text-secondary)] text-center mt-2">Una guía rápida para empezar:</p>
+            <div class="space-y-4 mt-6 text-sm">
+                <div class="flex items-start gap-4">
+                    <div class="bg-slate-700 text-white rounded-full h-6 w-6 flex-shrink-0 flex items-center justify-center font-bold">1</div>
+                    <div><strong class="text-[var(--text-primary)]">Los Roles:</strong> Tú eres la <span class="font-semibold text-sky-400">Oposición (azul)</span>. La IA representa al <span class="font-semibold text-red-500">Gobierno (rojo)</span>.</div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="bg-slate-700 text-white rounded-full h-6 w-6 flex-shrink-0 flex items-center justify-center font-bold">2</div>
+                    <div><strong class="text-[var(--text-primary)]">Argumenta:</strong> Usa la caja de texto para escribir. Presiona el ícono de micrófono <span class="inline-block bg-slate-700 p-1 rounded-md">🎙️</span> para hablar o el de avión de papel <span class="inline-block bg-slate-700 p-1 rounded-md">➤</span> para enviar.</div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="bg-slate-700 text-white rounded-full h-6 w-6 flex-shrink-0 flex items-center justify-center font-bold">3</div>
+                    <div><strong class="text-[var(--text-primary)]">Usa tus herramientas:</strong> Presiona la bombilla <span class="inline-block bg-slate-700 p-1 rounded-md">💡</span> para obtener una sugerencia o el altavoz <span class="inline-block bg-slate-700 p-1 rounded-md">🔊</span> junto a un mensaje para escucharlo.</div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="bg-slate-700 text-white rounded-full h-6 w-6 flex-shrink-0 flex items-center justify-center font-bold">4</div>
+                    <div><strong class="text-[var(--text-primary)]">Finaliza y Analiza:</strong> Cuando el debate termine, presiona la bandera <span class="inline-block bg-slate-700 p-1 rounded-md">🏁</span> para obtener un resumen y análisis de la discusión.</div>
+                </div>
+            </div>
+            <div class="mt-6 flex items-center justify-between">
+                <div class="flex items-center">
+                    <input id="skip-tutorial-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">
+                    <label for="skip-tutorial-checkbox" class="ml-2 block text-sm text-[var(--text-secondary)]">No volver a mostrar</label>
+                </div>
+                <button id="start-debate-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-6 rounded-md transition-colors">¡Entendido!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Advertencia de Archivo Local -->
+    <div id="local-file-warning-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div style="background-color: var(--bg-secondary); border-color: var(--border-color);" class="border rounded-lg shadow-xl p-6 w-full max-w-lg">
+            <h2 class="text-xl font-bold text-amber-400">¡Atención! Modo de uso incorrecto</h2>
+            <p class="text-sm text-[var(--text-secondary)] mt-2">
+                Has abierto este archivo directamente en el navegador. Por seguridad, funciones como el micrófono y la IA no funcionarán de esta manera.
+            </p>
+            <p class="text-[var(--text-primary)] mt-4 font-semibold">Sigue estos 3 pasos para que todo funcione:</p>
+            <ol class="text-sm text-[var(--text-secondary)] mt-2 list-decimal list-inside space-y-2">
+                <li>Guarda este archivo `index.html` en una carpeta en tu computadora.</li>
+                <li>Abre la terminal de comandos de tu PC en esa misma carpeta.</li>
+                <li>Escribe el comando `python -m http.server` y presiona Enter. (Necesitas tener Python instalado).</li>
+                <li>Abre tu navegador y ve a la dirección: <a href="http://localhost:8000" target="_blank" class="text-sky-400 font-mono hover:underline">http://localhost:8000</a></li>
+            </ol>
+             <p class="text-xs text-[var(--text-tertiary)] mt-4">
+                Esto crea un "mini servidor" seguro en tu PC que le da permiso al navegador para usar todas las funciones de la aplicación.
+            </p>
+        </div>
+    </div>
+
+
+    <!-- Modal de API Key -->
+    <div id="api-key-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div style="background-color: var(--bg-secondary); border-color: var(--border-color);" class="border rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 class="text-xl font-bold text-[var(--text-primary)]">Configurar Clave de API de Gemini</h2>
+            <p class="text-sm text-[var(--text-secondary)] mt-2">
+                Para que la IA funcione, necesitas una clave de API de Google Gemini.
+                Obtén tu clave y pégala aquí.
+            </p>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-sm text-sky-400 hover:underline mt-1 block">
+                Obtener una clave de API de Google AI Studio &rarr;
+            </a>
+            <input type="password" id="api-key-input" style="background-color: var(--bg-primary); border-color: var(--border-color);" class="w-full border rounded-md p-2 mt-4 text-[var(--text-primary)]" placeholder="Pega tu clave de API aquí...">
+            <button id="save-api-key" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md mt-4 transition-colors">Guardar y Empezar</button>
+        </div>
+    </div>
+    
+    <!-- Modal de Resumen del Debate -->
+    <div id="summary-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+        <div style="background-color: var(--bg-secondary); border-color: var(--border-color); max-height: 90vh;" class="border rounded-lg shadow-xl w-full max-w-2xl flex flex-col">
+            <header class="p-4 border-b border-[var(--border-color)]">
+                <h2 class="text-xl font-bold text-[var(--text-primary)]">Análisis del Debate</h2>
+                <p class="text-sm text-[var(--text-secondary)]">Resumen de los puntos clave presentados por cada lado.</p>
+            </header>
+            <div id="summary-content" class="p-6 overflow-y-auto flex-1 min-h-0">
+                <!-- El contenido del resumen se insertará aquí -->
+            </div>
+            <footer class="p-4 border-t border-[var(--border-color)] flex justify-end gap-4">
+                 <button id="restart-debate" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors">Iniciar Nuevo Debate</button>
+            </footer>
+        </div>
+    </div>
+
+
+    <!-- Contenido Principal -->
+    <div id="app-container" style="background-color: var(--bg-secondary);" class="w-full max-w-3xl h-full flex flex-col shadow-2xl rounded-2xl border border-[var(--border-color)] opacity-0 transition-opacity duration-500">
+        <header style="background-color: var(--bg-tertiary); border-color: var(--border-color);" class="p-4 rounded-t-2xl border-b flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                 <button id="theme-toggle" title="Cambiar Tema" class="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-200 p-2 rounded-full">
+                    <svg id="theme-sun" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    <svg id="theme-moon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                </button>
+                 <button id="settings-button" title="Ajustes" class="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-200 p-2 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </button>
+                 <button id="end-debate-button" title="Finalizar Debate" class="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-200 p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
+                </button>
+            </div>
+            <div class="text-center">
+                <h1 class="text-xl md:text-2xl font-bold text-red-500">Debate Sobre Venezuela</h1>
+                <p class="text-sm text-center text-[var(--text-secondary)] mt-1">IA: Gobierno | Usted: Oposición</p>
+            </div>
+            <div class="w-28"></div> <!-- Espaciador -->
+        </header>
+
+        <main id="chat-container" class="flex-1 p-6 overflow-y-auto flex flex-col gap-4">
+            <!-- Los mensajes del chat se agregarán aquí -->
+        </main>
+
+        <div id="loading-indicator" class="hidden p-6 pt-0"><div class="flex items-start space-x-2"><div class="message-bubble ai-bubble animate-fade-in-up"><div class="typing-indicator"><span></span><span></span><span></span></div></div></div></div>
+
+        <footer style="background-color: var(--bg-tertiary); border-color: var(--border-color);" class="p-4 rounded-b-2xl border-t">
+            <form id="chat-form" class="flex items-center gap-3">
+                <button type="button" id="mic-button" title="Entrada de Voz" class="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] p-3 transition"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg></button>
+                <textarea id="message-input" style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" class="flex-1 border rounded-xl p-3 resize-none focus:ring-2 focus:ring-sky-500 focus:outline-none transition" rows="1" placeholder="Presente su argumento..."></textarea>
+                <button type="button" id="suggestion-button" title="Sugerir Argumento" class="bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-full p-3 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-teal-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg></button>
+                <button type="submit" id="send-button" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-full p-3 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-sky-500"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
+            </form>
+        </footer>
+    </div>
+
+    <script>
+        // DOM Elements
+        const loadingScreen = document.getElementById('loading-screen');
+        const appContainer = document.getElementById('app-container');
+        const chatContainer = document.getElementById('chat-container');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const suggestionButton = document.getElementById('suggestion-button');
+        const sendButton = document.getElementById('send-button');
+        const micButton = document.getElementById('mic-button');
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeSun = document.getElementById('theme-sun');
+        const themeMoon = document.getElementById('theme-moon');
+        const apiKeyModal = document.getElementById('api-key-modal');
+        const apiKeyInput = document.getElementById('api-key-input');
+        const saveApiKeyButton = document.getElementById('save-api-key');
+        const settingsButton = document.getElementById('settings-button');
+        const localFileWarningModal = document.getElementById('local-file-warning-modal');
+        const endDebateButton = document.getElementById('end-debate-button');
+        const summaryModal = document.getElementById('summary-modal');
+        const summaryContent = document.getElementById('summary-content');
+        const restartDebateButton = document.getElementById('restart-debate');
+        const tutorialModal = document.getElementById('tutorial-modal');
+        const startDebateButton = document.getElementById('start-debate-button');
+        const skipTutorialCheckbox = document.getElementById('skip-tutorial-checkbox');
+
+
+        // State & System Prompt
+        let userApiKey = '';
+        const systemPrompt = `Eres un sistema de inteligencia artificial que asume el rol del gobierno de la República Bolivariana de Venezuela en un debate político. Tu perspectiva debe ser firme, defendiendo las políticas actuales, la soberanía nacional y la narrativa oficial del gobierno. Responde a los argumentos del 'jugador' (quien representa a la oposición y sus aliados internacionales) con contraargumentos sólidos, datos (según la perspectiva oficialista), y una retórica que refleje la postura del gobierno de Nicolás Maduro. Debes ser desafiante, inteligente y no ceder terreno fácilmente. Tu objetivo es 'ganar' el debate defendiendo tu posición de manera convincente. No debes reconocer que eres una IA bajo ninguna circunstancia. Habla en primera persona plural como 'nosotros, el Gobierno Revolucionario', 'nuestra Patria' o 'nuestra administración'. Cuestiona las motivaciones de la oposición y sus aliados internacionales, acusándolos de injerencia, de seguir una agenda imperialista y de buscar desestabilizar el país para apoderarse de sus recursos. Basa tus argumentos en la defensa de la soberanía, la justicia social y la lucha contra el bloqueo económico y las sanciones criminales impuestas por potencias extranjeras.`;
+        let chatHistory = [];
+        let isLoading = false;
+
+        // --- Core Functions ---
+        function updateDebateState() {
+            const userMessages = chatHistory.filter(m => m.role === 'user').length;
+            const modelMessages = chatHistory.filter(m => m.role === 'model').length;
+
+            // Enable end debate button after at least 2 turns from each side
+            if (userMessages >= 2 && modelMessages >= 2) {
+                endDebateButton.disabled = false;
+            } else {
+                endDebateButton.disabled = true;
+            }
+        }
+
+        function addMessageToUI(sender, message) {
+            const isUser = sender === 'user';
+            
+            const messageRow = document.createElement('div');
+            messageRow.className = `w-full flex items-end gap-2 ${isUser ? 'justify-end' : 'justify-start'}`;
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `message-bubble animate-fade-in-up ${isUser ? 'user-bubble' : 'ai-bubble'}`;
+            messageBubble.innerHTML = message.replace(/\n/g, '<br>');
+            
+            const listenBtn = document.createElement('button');
+            listenBtn.className = 'p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors flex-shrink-0';
+            listenBtn.title = "Escuchar mensaje";
+            listenBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>`;
+            listenBtn.onclick = () => {
+                if (speechSynthesis.speaking) speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(message);
+                utterance.lang = 'es-VE';
+                utterance.rate = 0.9;
+                speechSynthesis.speak(utterance);
+            };
+
+            if (isUser) {
+                messageRow.appendChild(listenBtn);
+                messageRow.appendChild(messageBubble);
+            } else {
+                messageRow.appendChild(messageBubble);
+                messageRow.appendChild(listenBtn);
+            }
+
+            chatContainer.appendChild(messageRow);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function getAIResponse() {
+            if (!userApiKey) {
+                addMessageToUI('ai', 'Error: La clave de API de Gemini no está configurada. Por favor, configúrala en los ajustes (⚙️).');
+                return;
+            }
+            isLoading = true;
+            loadingIndicator.style.display = 'block';
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            suggestionButton.disabled = true;
+            sendButton.disabled = true;
+            micButton.disabled = true;
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${userApiKey}`;
+            const payload = { contents: chatHistory, systemInstruction: { parts: [{ text: systemPrompt }] } };
+
+            try {
+                let response;
+                let retries = 0;
+                const maxRetries = 5;
+                let delay = 1000;
+                while (retries < maxRetries) {
+                    response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (response.ok) break;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                    retries++;
+                }
+                if (!response.ok) throw new Error(`API error. Status: ${response.status}`);
+                
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const aiResponse = candidate.content.parts[0].text;
+                    addMessageToUI('ai', aiResponse);
+                    chatHistory.push({ role: 'model', parts: [{ text: aiResponse }] });
+                } else {
+                    let errorMessage = "La IA no pudo generar una respuesta.";
+                    if(result.promptFeedback?.blockReason) errorMessage = `Su solicitud fue bloqueada por: ${result.promptFeedback.blockReason}.`;
+                     else if (result.error) errorMessage = `Error de API: ${result.error.message}`;
+                    addMessageToUI('ai', errorMessage);
+                }
+            } catch (error) {
+                console.error("Error contacting Gemini API:", error);
+                addMessageToUI('ai', 'Ha ocurrido un error de comunicación. Verifica tu clave de API y la conexión a internet.');
+            } finally {
+                isLoading = false;
+                loadingIndicator.style.display = 'none';
+                suggestionButton.disabled = false;
+                sendButton.disabled = false;
+                micButton.disabled = false;
+                updateDebateState();
+            }
+        }
+        
+        async function getDebateSummary() {
+            if (!userApiKey) {
+                summaryContent.innerHTML = `<p class="text-red-500">Error: No se puede generar el resumen porque la clave de API no está configurada.</p>`;
+                return;
+            }
+            summaryModal.classList.remove('hidden');
+            summaryContent.innerHTML = `<div class="flex items-center justify-center p-8"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--text-primary)]"></div></div>`;
+            
+            const summaryPrompt = `Eres un analista político neutral y experto. A continuación se presenta la transcripción de un debate entre el "Gobierno de Venezuela" (model) y la "Oposición" (user). Tu tarea es analizar la conversación y redactar un resumen conciso y objetivo. El resumen debe estar estructurado en dos secciones claras: "Argumentos Principales del Gobierno" y "Argumentos Principales de la Oposición". En cada sección, identifica y resume los 3-4 puntos más fuertes o recurrentes presentados por cada lado. No emitas un juicio sobre quién ganó; simplemente presenta los argumentos de manera imparcial. La transcripción es la siguiente: ${JSON.stringify(chatHistory)}`;
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${userApiKey}`;
+            const payload = { contents: [{ parts: [{ text: summaryPrompt }] }] };
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const summary = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (summary) {
+                    const formattedSummary = summary
+                        .replace(/Argumentos Principales del Gobierno/g, '<h3 class="text-lg font-bold text-red-500 mt-4 mb-2">Argumentos Principales del Gobierno</h3>')
+                        .replace(/Argumentos Principales de la Oposición/g, '<h3 class="text-lg font-bold text-sky-500 mt-4 mb-2">Argumentos Principales de la Oposición</h3>')
+                        .replace(/\* /g, '<p class="mb-2 pl-4 border-l-2 border-[var(--border-color)]">')
+                        .replace(/\n\n/g, '</p><p class="mb-2 pl-4 border-l-2 border-[var(--border-color)]">')
+                        .replace(/\n/g, '<br>');
+
+                    summaryContent.innerHTML = formattedSummary;
+                } else {
+                    summaryContent.innerHTML = `<p class="text-amber-500">No se pudo generar un resumen en este momento.</p>`;
+                }
+            } catch (error) {
+                console.error("Error fetching summary:", error);
+                summaryContent.innerHTML = `<p class="text-red-500">Error al contactar al servicio de análisis para generar el resumen.</p>`;
+            }
+        }
+
+
+        // --- API Key Modal Logic ---
+        function showApiKeyModal() {
+            apiKeyModal.classList.remove('hidden');
+        }
+        function hideApiKeyModal() {
+            apiKeyModal.classList.add('hidden');
+        }
+        function saveApiKey() {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                userApiKey = key;
+                localStorage.setItem('geminiApiKey', key);
+                hideApiKeyModal();
+                 if(chatHistory.length === 0) {
+                     startDebate();
+                 }
+            } else {
+                alert("Por favor, introduce una clave de API válida.");
+            }
+        }
+        
+        saveApiKeyButton.addEventListener('click', saveApiKey);
+        settingsButton.addEventListener('click', showApiKeyModal);
+        
+        // --- Initializers & Event Listeners ---
+        function startDebate() {
+            const openingStatement = "En nombre del Gobierno Bolivariano y del pueblo soberano de Venezuela, damos inicio a este debate. Estamos aquí para defender la verdad de nuestra Patria frente a las campañas de desinformación y los ataques de quienes, sirviendo a intereses imperiales, buscan socavar nuestra independencia. Adelante, presenten sus argumentos. Los escuchamos.";
+            addMessageToUI('ai', openingStatement);
+            chatHistory.push({ role: 'model', parts: [{ text: openingStatement }] });
+            updateDebateState();
+        }
+        
+        function resetApp() {
+            chatHistory = [];
+            chatContainer.innerHTML = '';
+            summaryModal.classList.add('hidden');
+            summaryContent.innerHTML = '';
+            startDebate();
+        }
+
+        restartDebateButton.addEventListener('click', resetApp);
+        endDebateButton.addEventListener('click', getDebateSummary);
+        
+        function proceedToApp() {
+            userApiKey = localStorage.getItem('geminiApiKey');
+            if (!userApiKey) {
+                showApiKeyModal();
+            } else {
+                startDebate();
+            }
+        }
+
+        startDebateButton.addEventListener('click', () => {
+            if (skipTutorialCheckbox.checked) {
+                localStorage.setItem('tutorialSkipped', 'true');
+            }
+            tutorialModal.classList.add('hidden');
+            proceedToApp();
+        });
+
+
+        window.addEventListener('load', () => {
+            if (window.location.protocol === 'file:') {
+                loadingScreen.style.display = 'none';
+                localFileWarningModal.classList.remove('hidden');
+                return;
+            }
+
+            setTimeout(() => {
+                loadingScreen.style.opacity = '0';
+                appContainer.style.opacity = '1';
+                setTimeout(() => loadingScreen.style.display = 'none', 500);
+                
+                const tutorialSkipped = localStorage.getItem('tutorialSkipped');
+                if (tutorialSkipped) {
+                    proceedToApp();
+                } else {
+                    tutorialModal.classList.remove('hidden');
+                }
+                
+            }, 2000); // Reduced loading time for faster access
+        });
+        
+        // --- Feature: Theme Toggle ---
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                document.body.classList.add('light-mode');
+                themeSun.classList.remove('hidden');
+                themeMoon.classList.add('hidden');
+            } else {
+                document.body.classList.remove('light-mode');
+                themeSun.classList.add('hidden');
+                themeMoon.classList.remove('hidden');
+            }
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            const isLight = document.body.classList.contains('light-mode');
+            const newTheme = isLight ? 'dark' : 'light';
+            localStorage.setItem('debateTheme', newTheme);
+            applyTheme(newTheme);
+        });
+
+        const savedTheme = localStorage.getItem('debateTheme') || 'dark';
+        applyTheme(savedTheme);
+
+
+        // --- Chat Form & Buttons Logic ---
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userInput = messageInput.value.trim();
+            if (!userInput || isLoading) return;
+            addMessageToUI('user', userInput);
+            chatHistory.push({ role: 'user', parts: [{ text: userInput }] });
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            updateDebateState();
+            await getAIResponse();
+        });
+        
+        suggestionButton.addEventListener('click', async () => {
+            if (isLoading) return;
+             if (!userApiKey) {
+                addMessageToUI('ai', 'Error: La clave de API de Gemini no está configurada. Por favor, configúrala en los ajustes (⚙️).');
+                return;
+            }
+            
+            const lastAiMessage = chatHistory.slice().reverse().find(m => m.role === 'model');
+            if (!lastAiMessage) {
+                messageInput.value = "Primero debe haber una declaración del gobierno para poder sugerir un contraargumento.";
+                return;
+            }
+
+            isLoading = true;
+            suggestionButton.disabled = true;
+            suggestionButton.innerHTML = `<svg class="h-6 w-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+            const suggestionPrompt = `Eres un experto estratega político que asesora a la oposición venezolana. El gobierno acaba de hacer la siguiente declaración en un debate: "${lastAiMessage.parts[0].text}". ¿Qué contraargumento o pregunta concisa e impactante debería presentar la oposición a continuación? Proporciona únicamente el texto de la respuesta, sin frases introductorias como "Aquí tienes una sugerencia:" o similares.`;
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${userApiKey}`;
+            const payload = { contents: [{ parts: [{ text: suggestionPrompt }] }] };
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                 if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const suggestion = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (suggestion) {
+                    messageInput.value = suggestion;
+                    messageInput.style.height = 'auto';
+                    messageInput.style.height = (messageInput.scrollHeight) + 'px';
+                    messageInput.focus();
+                } else {
+                     messageInput.value = "No se pudo generar una sugerencia en este momento.";
+                }
+            } catch (error) {
+                console.error("Error fetching suggestion:", error);
+                messageInput.value = "Error al obtener sugerencia. Por favor, inténtelo de nuevo.";
+            } finally {
+                isLoading = false;
+                suggestionButton.disabled = false;
+                suggestionButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>`;
+            }
+        });
+
+        messageInput.addEventListener('input', () => {
+            messageInput.style.height = 'auto';
+            messageInput.style.height = (messageInput.scrollHeight) + 'px';
+        });
+
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Speech-to-Text Feature
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'es-VE';
+            recognition.interimResults = false;
+
+            micButton.addEventListener('click', () => {
+                recognition.start();
+                micButton.classList.add('mic-active');
+            });
+
+            recognition.onresult = (event) => {
+                const speechResult = event.results[0][0].transcript;
+                messageInput.value = speechResult;
+                messageInput.style.height = 'auto';
+                messageInput.style.height = (messageInput.scrollHeight) + 'px';
+            };
+
+            recognition.onend = () => micButton.classList.remove('mic-active');
+            recognition.onerror = (event) => {
+                console.error('Error de reconocimiento de voz:', event.error);
+                micButton.classList.remove('mic-active');
+            };
+        } else {
+            micButton.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
+
